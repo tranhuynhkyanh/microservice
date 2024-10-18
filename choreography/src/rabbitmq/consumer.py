@@ -1,0 +1,26 @@
+import time
+
+import pika
+
+credentials = pika.PlainCredentials('guest', 'guest')
+parameters = pika.ConnectionParameters('localhost', 5672, '/', credentials)
+connection = pika.BlockingConnection(parameters)
+
+channel = connection.channel()
+channel.queue_declare(queue='task_queue', durable=True)
+print(' [*] Waiting for messages. To exit press CTRL+C')
+
+
+def callback(ch, method, properties, body):
+    print(f" [x] Received {body.decode()}")
+    time.sleep(body.count(b'.'))
+    print(" [x] Done")
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
+
+channel.basic_qos(prefetch_count=3)
+channel.basic_consume(queue='task_queue', on_message_callback=callback)
+
+channel.start_consuming()
+
+
